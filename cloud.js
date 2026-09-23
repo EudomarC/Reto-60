@@ -3,3 +3,6 @@ async function reto60Cloud(action,payload={}){const initData=window.Telegram?.We
 async function syncCloudPlayer(){return reto60Cloud("sync_player");}
 async function recordCloudMatch({category,score,seed,mode}){return reto60Cloud("record_match",{category,score,seed,mode});}
 async function getCloudLeaderboard(){return reto60Cloud("leaderboard");}
+async function createCloudChallenge({opponent_id,category,seed}){return reto60Cloud("create_challenge",{opponent_id,category,seed});}
+async function getPendingChallenges(){return reto60Cloud("pending_challenges");}
+async function respondCloudChallenge(challenge_id,decision){return reto60Cloud("respond_challenge",{challenge_id,decision});}
