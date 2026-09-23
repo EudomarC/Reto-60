@@ -7,6 +7,12 @@ function createChallengeSeed(){return `${Date.now().toString(36)}-${Math.random(
 function encodeChallengePayload(payload){const json=JSON.stringify(payload);return btoa(unescape(encodeURIComponent(json))).replace(/=/g,"").replace(/\+/g,"-").replace(/\//g,"_");}
 function decodeChallengePayload(token){try{const normalized=token.replace(/-/g,"+").replace(/_/g,"/"),padded=normalized+"=".repeat((4-normalized.length%4)%4);return JSON.parse(decodeURIComponent(escape(atob(padded))));}catch(error){console.warn("Reto 60: desafío inválido",error);return null;}}
 function getTelegramPlayer(tg){const user=tg?.initDataUnsafe?.user;if(!user)return {id:null,name:"Un jugador"};const name=[user.first_name,user.last_name].filter(Boolean).join(" ")||user.username||"Jugador";return {id:user.id||null,name:name.slice(0,40)};}
+function getReto60DisplayPlayer(){
+  const telegram=(typeof currentPlayer!=="undefined"&&currentPlayer)||getTelegramPlayer(window.Telegram?.WebApp);
+  const guest=(localStorage.getItem("reto60_display_name")||"").trim();
+  if(guest&&(!telegram?.id||telegram.name==="Un jugador"))return {id:null,name:guest.slice(0,40)};
+  return telegram||{id:null,name:guest||"Un jugador"};
+}
 function buildChallengeToken(category,seed,score,player){return encodeChallengePayload({v:CHALLENGE_VERSION,c:category,s:seed,p:Number(score)||0,n:player?.name||"Un jugador",u:player?.id||null});}
 function getChallengeFromUrl(){const params=new URLSearchParams(window.location.search),token=params.get("challenge");if(!token)return null;const payload=decodeChallengePayload(token);if(!payload||![1,CHALLENGE_VERSION].includes(payload.v)||typeof payload.c!=="string"||typeof payload.s!=="string")return null;return payload;}
 
@@ -31,31 +37,59 @@ function installFriendChallengeButton(){
   normalPlay.insertAdjacentElement("afterend",button);
 }
 
+function getWebDuelResult(){
+  if(typeof activeChallenge==="undefined"||!activeChallenge||activeChallenge.outgoing||activeChallenge.friendInvite)return null;
+  const rivalScore=Number(activeChallenge.p)||0,myScore=(typeof score!=="undefined"&&Number(score))||0;
+  const rivalName=activeChallenge.n||"Rival",me=getReto60DisplayPlayer().name||"Jugador";
+  const winner=myScore>rivalScore?me:myScore<rivalScore?rivalName:null;
+  return {me,rivalName,myScore,rivalScore,winner,draw:myScore===rivalScore};
+}
+function decorateWebDuelResult(){
+  const result=document.getElementById("result");if(!result||result.classList.contains("hidden"))return;
+  const duel=getWebDuelResult();if(!duel)return;
+  const versus=document.getElementById("versusResult"),message=document.getElementById("message"),share=[...result.querySelectorAll("button.share")][0];
+  if(versus){versus.classList.remove("hidden");versus.innerHTML=`<div style="font-size:14px;color:#aaa;margin-bottom:8px">⚔️ RESULTADO DEL DUELO</div><div style="font-size:20px;font-weight:800;color:#ffb800">${escapeDuelText(duel.rivalName)} ${duel.rivalScore} — ${duel.myScore} ${escapeDuelText(duel.me)}</div>`;}
+  if(message)message.textContent=duel.draw?"🤝 ¡Empate!":`🏆 ${duel.winner} ganó el duelo`;
+  if(share)share.textContent="📤 COMPARTIR RESULTADO";
+}
+function escapeDuelText(value){const d=document.createElement("div");d.textContent=String(value||"");return d.innerHTML;}
+function installDuelResultWatcher(){
+  const result=document.getElementById("result");if(!result)return;
+  new MutationObserver(()=>{if(!result.classList.contains("hidden"))setTimeout(decorateWebDuelResult,0);}).observe(result,{attributes:true,attributeFilter:["class"]});
+}
+
 function challengeShareData(){
   if(typeof buildChallengeToken!=="function")return null;
   const seed=(typeof currentSeed!=="undefined"&&currentSeed)||createChallengeSeed();
   const category=(typeof currentCategory!=="undefined"&&currentCategory)||"all";
   const points=(typeof score!=="undefined"&&Number(score))||0;
-  const player=(typeof currentPlayer!=="undefined"&&currentPlayer)||{name:"Un jugador"};
+  const player=getReto60DisplayPlayer();
   const token=buildChallengeToken(category,seed,points,player);
   const url=location.origin+location.pathname+"?challenge="+encodeURIComponent(token);
   const label=typeof categoryLabel==="function"?categoryLabel(category):category;
+  const duel=getWebDuelResult();
+  if(duel){
+    const resultText=duel.draw?`🤝 ${duel.rivalName} ${duel.rivalScore} — ${duel.myScore} ${duel.me}`:`🏆 ${duel.winner} ganó: ${duel.rivalName} ${duel.rivalScore} — ${duel.myScore} ${duel.me}`;
+    return {url,text:`⚔️ RESULTADO RETO 60 · ${label}\n${resultText}\n¿Te atreves a jugar? 🔥`};
+  }
   return {url,text:`🔥 ${player.name} hizo ${points} puntos en RETO 60 · ${label}. ¿Puedes superarlo? ⚔️`};
 }
 function closeChallengeShareMenu(){document.getElementById("challengeShareOverlay")?.remove();}
 function openChallengeShareMenu(){
   closeChallengeShareMenu();const d=challengeShareData();if(!d)return;
+  const duel=getWebDuelResult();
   const overlay=document.createElement("div");overlay.id="challengeShareOverlay";overlay.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99999;display:flex;align-items:flex-end;justify-content:center;padding:18px";
   const box=document.createElement("div");box.style.cssText="width:100%;max-width:500px;background:#151a35;border:1px solid #292f5c;border-radius:22px;padding:22px;color:white;text-align:center";
-  box.innerHTML='<h2 style="margin:0 0 8px">📤 Enviar desafío</h2><p style="color:#aaa;margin:0 0 14px">Elige dónde quieres enviarlo.</p>';
+  box.innerHTML=`<h2 style="margin:0 0 8px">📤 ${duel?'Compartir resultado':'Enviar desafío'}</h2><p style="color:#aaa;margin:0 0 14px">Elige dónde quieres compartirlo.</p>`;
   const add=(label,bg,fn)=>{const b=document.createElement("button");b.textContent=label;b.style.cssText=`width:100%;border:0;border-radius:16px;padding:16px;margin-top:10px;font-size:17px;font-weight:bold;background:${bg};color:white`;b.onclick=fn;box.appendChild(b);};
   add("🟢 WHATSAPP","#25D366",()=>{const u="https://wa.me/?text="+encodeURIComponent(d.text+"\n\n"+d.url);window.open(u,"_blank");});
-  add("✈️ TELEGRAM","#229ED9",()=>{const u="https://t.me/share/url?url="+encodeURIComponent(d.url)+"&text="+encodeURIComponent(d.text);if(window.Telegram?.WebApp)window.Telegram.WebApp.openTelegramLink(u);else window.open(u,"_blank");});
-  add("🔗 COPIAR ENLACE","#5865a8",async()=>{try{await navigator.clipboard.writeText(d.text+"\n\n"+d.url);alert("Enlace del desafío copiado.");closeChallengeShareMenu();}catch{prompt("Copia este enlace:",d.url);}});
-  add("📱 MÁS OPCIONES","#28a8e9",async()=>{if(navigator.share){try{await navigator.share({title:"Reto 60",text:d.text,url:d.url});}catch(e){if(e?.name!=="AbortError")console.warn(e);}}else prompt("Copia y comparte este enlace:",d.url);});
+  add("✈️ TELEGRAM","#229ED9",()=>{const u="https://t.me/share/url?url="+encodeURIComponent(d.url)+"&text="+encodeURIComponent(d.text);if(window.Telegram?.WebApp?.initData)window.Telegram.WebApp.openTelegramLink(u);else window.open(u,"_blank");});
+  add("🔗 COPIAR ENLACE","#5865a8",async()=>{try{await navigator.clipboard.writeText(d.text+"\n\n"+d.url);alert(duel?"Resultado y enlace copiados.":"Enlace del desafío copiado.");closeChallengeShareMenu();}catch{prompt("Copia este enlace:",d.url);}});
+  add("📱 MÁS OPCIONES","#28a8e9",async()=>{if(navigator.share){try{await navigator.share({title:duel?"Resultado Reto 60":"Reto 60",text:d.text,url:d.url});}catch(e){if(e?.name!=="AbortError")console.warn(e);}}else prompt("Copia y comparte este enlace:",d.url);});
   add("CANCELAR","#252c58",closeChallengeShareMenu);overlay.onclick=e=>{if(e.target===overlay)closeChallengeShareMenu();};overlay.appendChild(box);document.body.appendChild(overlay);
 }
 function installCrossAppShare(){
-  document.addEventListener("click",e=>{const b=e.target.closest?.("button.share");if(!b||!b.textContent.includes("COMPARTIR DESAFÍO"))return;e.preventDefault();e.stopImmediatePropagation();openChallengeShareMenu();},true);
+  document.addEventListener("click",e=>{const b=e.target.closest?.("button.share");if(!b||(!b.textContent.includes("COMPARTIR DESAFÍO")&&!b.textContent.includes("COMPARTIR RESULTADO")))return;e.preventDefault();e.stopImmediatePropagation();openChallengeShareMenu();},true);
 }
-if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>{setTimeout(installFriendChallengeButton,0);installCrossAppShare();});else{setTimeout(installFriendChallengeButton,0);installCrossAppShare();}
+function installReto60ChallengeEnhancements(){setTimeout(installFriendChallengeButton,0);installCrossAppShare();installDuelResultWatcher();}
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",installReto60ChallengeEnhancements);else installReto60ChallengeEnhancements();
