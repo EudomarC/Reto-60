@@ -9,3 +9,36 @@ function decodeChallengePayload(token){try{const normalized=token.replace(/-/g,"
 function getTelegramPlayer(tg){const user=tg?.initDataUnsafe?.user;if(!user)return {id:null,name:"Un jugador"};const name=[user.first_name,user.last_name].filter(Boolean).join(" ")||user.username||"Jugador";return {id:user.id||null,name:name.slice(0,40)};}
 function buildChallengeToken(category,seed,score,player){return encodeChallengePayload({v:CHALLENGE_VERSION,c:category,s:seed,p:Number(score)||0,n:player?.name||"Un jugador",u:player?.id||null});}
 function getChallengeFromUrl(){const params=new URLSearchParams(window.location.search),token=params.get("challenge");if(!token)return null;const payload=decodeChallengePayload(token);if(!payload||![1,CHALLENGE_VERSION].includes(payload.v)||typeof payload.c!=="string"||typeof payload.s!=="string")return null;return payload;}
+
+// Home-screen entry point for challenging anyone, even if they are not yet ranked.
+// The challenger plays first; the existing result screen then shares the seeded challenge
+// through the phone's native share sheet (WhatsApp, Telegram, etc.).
+function startFriendChallenge(){
+  if(typeof categoryDefinitions==="undefined"||typeof getQuestionPool!=="function"||typeof startGame!=="function")return;
+  const available=categoryDefinitions.filter(c=>getQuestionPool(c.id).length);
+  const choices=available.map(c=>`${c.id}: ${c.label}`).join("\n");
+  const selected=prompt(`⚔️ RETAR A UN AMIGO\n\nElige la categoría escribiendo su código:\n\n${choices}`,"all");
+  if(!selected)return;
+  const category=selected.trim().toLowerCase();
+  if(!available.some(c=>c.id===category)){alert("Categoría no válida.");return;}
+  startGame(category,{friendInvite:true,n:"tu amigo",s:createChallengeSeed()});
+}
+
+function installFriendChallengeButton(){
+  const home=document.getElementById("home");
+  if(!home||document.getElementById("friendChallengeButton"))return;
+  const normalPlay=[...home.querySelectorAll("button")].find(b=>b.textContent.includes("JUGAR RETO 60"));
+  if(!normalPlay)return;
+  const button=document.createElement("button");
+  button.id="friendChallengeButton";
+  button.className="share";
+  button.textContent="⚔️ RETAR A UN AMIGO";
+  button.onclick=startFriendChallenge;
+  normalPlay.insertAdjacentElement("afterend",button);
+  const hint=document.createElement("div");
+  hint.className="small";
+  hint.textContent="Juega primero y envía el mismo reto por WhatsApp, Telegram u otra app.";
+  button.insertAdjacentElement("afterend",hint);
+}
+
+if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>setTimeout(installFriendChallengeButton,0));else setTimeout(installFriendChallengeButton,0);
