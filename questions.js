@@ -1,17 +1,32 @@
 const questions = [
-  {
-    q: "¿Cuál es el planeta más grande del sistema solar?",
-    a: ["Marte", "Júpiter", "Saturno", "Venus"],
-    c: 1
-  },
-  {
-    q: "¿Cuánto es 12 × 8?",
-    a: ["86", "96", "106", "88"],
-    c: 1
-  },
-  {
-    q: "¿Cuál es la capital de Argentina?",
-    a: ["Córdoba", "Buenos Aires", "Mendoza", "Rosario"],
-    c: 1
-  }
+{q:"¿Cuál es el planeta más grande del sistema solar?",a:["Marte","Júpiter","Saturno","Venus"],c:1},
+{q:"¿Cuánto es 12 × 8?",a:["86","96","106","88"],c:1},
+{q:"¿Cuál es la capital de Argentina?",a:["Córdoba","Buenos Aires","Mendoza","Rosario"],c:1},
+{q:"¿Cuál es la capital de Chile?",a:["Valparaíso","Santiago","Concepción","Antofagasta"],c:1},
+{q:"¿Cuál es la capital de Venezuela?",a:["Maracaibo","Valencia","Caracas","Barquisimeto"],c:2},
+{q:"¿Cuántos continentes se suelen reconocer?",a:["5","6","7","8"],c:2},
+{q:"¿Qué océano es el más grande?",a:["Atlántico","Índico","Pacífico","Ártico"],c:2},
+{q:"¿Cuánto es 15 + 27?",a:["40","42","44","46"],c:1},
+{q:"¿Cuánto es 9 × 7?",a:["56","63","72","69"],c:1},
+{q:"¿Cuánto es 100 ÷ 4?",a:["20","25","30","40"],c:1},
+{q:"¿Qué animal es conocido como el rey de la selva?",a:["Tigre","León","Jaguar","Elefante"],c:1},
+{q:"¿Cuál es el satélite natural de la Tierra?",a:["Marte","Sol","Luna","Venus"],c:2},
+{q:"¿Qué gas necesitamos principalmente para respirar?",a:["Oxígeno","Helio","Hidrógeno","Neón"],c:0},
+{q:"¿Cuántos lados tiene un hexágono?",a:["5","6","7","8"],c:1},
+{q:"¿Cuál es el resultado de 11²?",a:["111","121","131","101"],c:1},
+{q:"¿Qué instrumento mide la temperatura?",a:["Barómetro","Termómetro","Cronómetro","Altímetro"],c:1},
+{q:"¿En qué continente está Egipto?",a:["Asia","Europa","África","Oceanía"],c:2},
+{q:"¿Cuál es la capital de Francia?",a:["Roma","Madrid","París","Lyon"],c:2},
+{q:"¿Cuál es la capital de Japón?",a:["Kioto","Tokio","Osaka","Nagoya"],c:1},
+{q:"¿Cuántos minutos tiene una hora?",a:["50","60","70","100"],c:1},
+{q:"¿Qué color resulta de mezclar azul y amarillo?",a:["Verde","Naranja","Morado","Rojo"],c:0},
+{q:"¿Cuál es el metal cuyo símbolo químico es Au?",a:["Plata","Oro","Cobre","Aluminio"],c:1},
+{q:"¿Cuál es el símbolo químico del agua?",a:["CO2","O2","H2O","NaCl"],c:2},
+{q:"¿Cuántos días tiene una semana?",a:["5","6","7","8"],c:2},
+{q:"¿Cuál es el número primo más pequeño?",a:["0","1","2","3"],c:2},
+{q:"¿Qué planeta es conocido como el planeta rojo?",a:["Mercurio","Marte","Júpiter","Neptuno"],c:1},
+{q:"¿Cuánto es 144 ÷ 12?",a:["10","11","12","14"],c:2},
+{q:"¿Cuál es la capital de Italia?",a:["Milán","Roma","Venecia","Nápoles"],c:1},
+{q:"¿Cuántas horas tiene un día?",a:["12","18","24","36"],c:2},
+{q:"¿Qué órgano bombea la sangre por el cuerpo?",a:["Pulmón","Cerebro","Corazón","Hígado"],c:2}
 ];
