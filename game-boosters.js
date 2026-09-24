@@ -19,9 +19,24 @@
       const active=window.R60Store?.isTimeActive?.()===true;
       const available=Number(window.R60Store?.count?.('time10')||0)>0;
       const useBoost=active&&available;
-      original(category,challenge);
+      let nativeSetInterval=null;
       if(useBoost){
-        window.seconds=70;
+        nativeSetInterval=window.setInterval;
+        window.setInterval=function(callback,delay,...args){
+          let bonusRemaining=10;
+          return nativeSetInterval(function(){
+            if(bonusRemaining>0){
+              bonusRemaining--;
+              const timeEl=document.getElementById('time');
+              if(timeEl)timeEl.innerText=String(60+bonusRemaining);
+              return;
+            }
+            callback(...args);
+          },delay);
+        };
+      }
+      try{original(category,challenge)}finally{if(nativeSetInterval)window.setInterval=nativeSetInterval}
+      if(useBoost){
         const timeEl=document.getElementById('time');if(timeEl)timeEl.innerText='70';
         const mode=document.getElementById('gameMode');if(mode)mode.innerText+=(mode.innerText?' · ':'')+'⏳ +10 s ACTIVADO';
         window.R60Store.consumeTime();
