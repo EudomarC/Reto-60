@@ -1,45 +1,15 @@
-/* Reto 60 — game booster bridge */
+/* Reto 60 — game boosters */
 (function(){
-  const TEST_PARAM='r60test';
-  function testEnabled(){try{return new URLSearchParams(location.search).get(TEST_PARAM)==='1'}catch(e){return false}}
-  function installTestButton(){
-    if(!testEnabled()||document.getElementById('r60BoosterTestButton'))return;
-    const home=document.getElementById('home');if(!home||!window.R60Store)return;
-    const b=document.createElement('button');b.id='r60BoosterTestButton';b.className='restart';b.style.cssText='background:#432c68;color:#fff;border:1px dashed #b597ff;margin-bottom:16px';
-    const refresh=()=>{const n=Number(window.R60Store.count('time10')||0);b.textContent=`🧪 PRUEBA INTERNA · AÑADIR +10 s (${n} disponibles)`};refresh();
-    b.onclick=()=>{window.R60Store.add('time10',1);window.R60Store.activateTime();refresh();alert('🧪 Unidad de prueba añadida y activada.\n\nLa próxima partida comenzará en 70 segundos.\nNo se realizó ningún cobro.')};
-    const store=document.getElementById('r60StoreButton');if(store)store.insertAdjacentElement('afterend',b);else home.appendChild(b);
-    window.addEventListener('r60inventorychange',refresh);
-  }
-  function install(){
-    if(window.__r60BoosterInstalled){installTestButton();return true}
-    if(typeof window.startGame!=='function'||!window.R60Store)return false;
-    const original=window.startGame;
-    window.startGame=function(category='all',challenge=null){
-      const active=window.R60Store?.isTimeActive?.()===true;
-      const available=Number(window.R60Store?.count?.('time10')||0)>0;
-      const useBoost=active&&available;
-      original(category,challenge);
-      if(!useBoost)return;
-
-      /* startGame creates the normal 60-second timer. Replace it completely
-         with one real 70-second countdown so there is never a 70 -> 60 jump. */
-      clearInterval(timer);
-      seconds=70;
-      const timeEl=document.getElementById('time');if(timeEl)timeEl.innerText='70';
-      const mode=document.getElementById('gameMode');if(mode)mode.innerText+=(mode.innerText?' · ':'')+'⏳ +10 s ACTIVADO';
-      timer=setInterval(()=>{
-        seconds--;
-        if(timeEl)timeEl.innerText=String(seconds);
-        if(seconds<=0)endGame();
-      },1000);
-
-      window.R60Store.consumeTime();
-      try{window.dispatchEvent(new CustomEvent('r60boosterused',{detail:{id:'time10',seconds:10,challenge:!!challenge}}));}catch(e){}
-    };
-    window.__r60BoosterInstalled=true;installTestButton();return true;
-  }
-  function boot(){if(install())return;let n=0;const t=setInterval(()=>{n++;if(install()||n>120)clearInterval(t)},100)}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-  window.R60GameBoosters={install,testEnabled};
+ const TEST_PARAM='r60test';let foxActive=false,foxUsed=false,foxTimer=null,foxLeft=0;
+ function testEnabled(){try{return new URLSearchParams(location.search).get(TEST_PARAM)==='1'}catch(e){return false}}
+ function removeFoxUI(){clearInterval(foxTimer);foxTimer=null;foxActive=false;document.getElementById('r60FoxAbility')?.remove()}
+ function foxEquipped(){return window.R60Store?.isFoxEquipped?.()===true}
+ function installFoxUI(){removeFoxUI();foxUsed=false;if(!foxEquipped())return;const panel=document.querySelector('#game .panel');if(!panel)return;const box=document.createElement('div');box.id='r60FoxAbility';box.style.cssText='margin:12px 0 2px;padding:12px;border:1px solid #d87548;border-radius:16px;background:linear-gradient(135deg,#341b22,#191b3b);text-align:center';box.innerHTML='<div style="font-size:12px;color:#ffb08f;font-weight:900">🦊 ZORRO R60 EQUIPADO</div><button id="r60FoxActivate" style="margin-top:8px;background:linear-gradient(#ff9a43,#e85826);color:#fff;border:0">🦊 ACTIVAR x2 · 10 s</button><div id="r60FoxStatus" style="font-size:12px;color:#ffd0bb;margin-top:7px">1 activación disponible en esta partida</div>';const q=document.getElementById('question');if(q)q.insertAdjacentElement('beforebegin',box);else panel.appendChild(box);box.querySelector('#r60FoxActivate').onclick=activateFox}
+ function activateFox(){if(foxUsed||foxActive||!foxEquipped()||gameEnded)return;foxUsed=true;foxActive=true;foxLeft=10;const b=document.getElementById('r60FoxActivate'),s=document.getElementById('r60FoxStatus');if(b){b.disabled=true;b.textContent='🦊 x2 ACTIVO'}if(s)s.innerHTML='⚡ PUNTOS x2 · <b>10 s</b>';foxTimer=setInterval(()=>{foxLeft--;if(s)s.innerHTML=foxLeft>0?`⚡ PUNTOS x2 · <b>${foxLeft} s</b>`:'🦊 Multiplicador utilizado';if(foxLeft<=0){clearInterval(foxTimer);foxTimer=null;foxActive=false;if(b)b.textContent='🦊 x2 UTILIZADO'}},1000)}
+ function installAnswerMultiplier(){if(window.__r60FoxAnswerInstalled)return;const answers=document.getElementById('answers');if(!answers)return;answers.addEventListener('click',e=>{const b=e.target.closest('.answer');if(!b||!foxActive||gameEnded)return;const before=Number(score||0);setTimeout(()=>{const after=Number(score||0);/* Correct normal answer adds 10. Add the second 10 only while fox is active. Wrong answers remain -5. */if(after-before===10){score+=10;const cs=document.getElementById('currentScore');if(cs)cs.innerText=String(score);const status=document.getElementById('r60FoxStatus');if(status)status.innerHTML=`⚡ +20 PUNTOS · x2 ACTIVO · <b>${foxLeft} s</b>`}},0)},true);window.__r60FoxAnswerInstalled=true}
+ function installTestButton(){if(!testEnabled()||document.getElementById('r60BoosterTestButton'))return;const home=document.getElementById('home');if(!home||!window.R60Store)return;const wrap=document.createElement('div');wrap.id='r60BoosterTestButton';wrap.style.cssText='margin-bottom:16px';wrap.innerHTML='<button class="restart" id="r60TestTime" style="background:#432c68;color:#fff;border:1px dashed #b597ff">🧪 AÑADIR +10 s</button><button class="restart" id="r60TestFox" style="background:#54251f;color:#fff;border:1px dashed #ff9977">🧪 AÑADIR + EQUIPAR ZORRO</button>';const store=document.getElementById('r60StoreButton');if(store)store.insertAdjacentElement('afterend',wrap);else home.appendChild(wrap);wrap.querySelector('#r60TestTime').onclick=()=>{window.R60Store.add('time10',1);window.R60Store.activateTime();alert('🧪 +10 s añadido y activado. No se realizó ningún cobro.')};wrap.querySelector('#r60TestFox').onclick=()=>{if(window.R60Store.count('fox')<1)window.R60Store.add('fox',1);window.R60Store.equipFox();alert('🧪 Zorro R60 añadido y equipado. Inicia una partida y verás el botón 🦊 ACTIVAR x2.')};}
+ function install(){if(window.__r60BoosterInstalled){installTestButton();installAnswerMultiplier();return true}if(typeof window.startGame!=='function'||!window.R60Store)return false;const original=window.startGame;window.startGame=function(category='all',challenge=null){const active=window.R60Store.isTimeActive?.()===true,available=Number(window.R60Store.count?.('time10')||0)>0,useBoost=active&&available;original(category,challenge);installFoxUI();if(useBoost){clearInterval(timer);seconds=70;const timeEl=document.getElementById('time');if(timeEl)timeEl.innerText='70';const mode=document.getElementById('gameMode');if(mode)mode.innerText+=(mode.innerText?' · ':'')+'⏳ +10 s ACTIVADO';timer=setInterval(()=>{seconds--;if(timeEl)timeEl.innerText=String(seconds);if(seconds<=0)endGame()},1000);window.R60Store.consumeTime();try{window.dispatchEvent(new CustomEvent('r60boosterused',{detail:{id:'time10',seconds:10,challenge:!!challenge}}))}catch(e){}}};window.__r60BoosterInstalled=true;installAnswerMultiplier();installTestButton();return true}
+ function boot(){if(install())return;let n=0;const t=setInterval(()=>{n++;if(install()||n>120)clearInterval(t)},100)}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+ window.R60GameBoosters={install,testEnabled,isFoxActive:()=>foxActive,activateFox};
 })();
